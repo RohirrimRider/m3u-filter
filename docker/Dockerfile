@@ -13,22 +13,9 @@ WORKDIR /src
 RUN rustup target add x86_64-unknown-linux-musl
 RUN cargo build --target x86_64-unknown-linux-musl --release
 
-FROM node:lts as node-build
-
-ENV NODE_OPTIONS=--openssl-legacy-provider
-
-COPY ./frontend /app
-WORKDIR /app
-
-RUN yarn install \
-  --prefer-offline \
-  --frozen-lockfile \
-  --non-interactive \
-  --production=false
-
-RUN yarn build
-
-RUN rm -rf node_modules
+# DUMMY web static file
+FROM alpine as web
+RUN mkdir /web && echo 'Piss off' > /web/index.html
 
 # Final container
 FROM scratch
@@ -38,7 +25,7 @@ COPY --from=rust-build /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=rust-build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 COPY --from=rust-build /src/target/x86_64-unknown-linux-musl/release/m3u-filter /m3u-filter
-COPY --from=node-build /app/build /web
+COPY --from=web /web /web
 # config should be mounted as volume
 # COPY ./config /config
 
